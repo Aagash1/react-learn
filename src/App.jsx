@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import "./App.css";
-
+import MovieSearch from "./MovieSearch";
 const MovieDetails = lazy(() => import("./MovieDetails"));
 
 function App() {
@@ -24,7 +24,8 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Movie Search App</h1>
+      <MovieSearch />
+      <h1>Movie Search App Normal</h1>
       <input
         type="text"
         placeholder="Search for a movie..."
