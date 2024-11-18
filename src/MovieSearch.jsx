@@ -1,61 +1,86 @@
 import React, { useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 
-export default function MovieSearch() {
+const throttle = (func, limit) => {
+  let flag=true;
+  return function(...args){
+     let context=this;
+     if(flag){
+      func.apply(context,args);
+      flag=false;
+      setTimeout(()=>{
+         flag=true;
+      },limit)
+     }
+  }
+};
+
+export default function MovieSearchWithScroll() {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Debounce function
-  const debounce = (func, delay) => {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  // API call with debounce
-  const fetchItems = async (query) => {
+  const [hasMore, setHasMore] = useState(true); // To track if more data is available
+  const [count,setCount]=useState(0);
+  // API call for fetching search results
+  const fetchItems = async (query, offset = 0, limit = 50) => {
+    if (!hasMore && offset > 0) return; // Prevent unnecessary calls
     if (query.trim() === '') {
       setItems([]);
       return;
     }
-
+    setCount(count+1);
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/search?query=${query}`);
+      const response = await fetch(
+        `http://localhost:5000/search?query=${query}&offset=${offset}&limit=${limit}`
+      );
       const data = await response.json();
-      setItems(data);
+      if (offset === 0) {
+        // New search query
+        setItems(data.items || []);
+      } else {
+        // Append data for infinite scroll
+        setItems((prev) => [...prev, ...(data.items || [])]);
+      }
+      setHasMore(data.hasMore); // Update if more data is available
     } catch (error) {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
   };
 
-  // Debounced version of fetchItems
-  const debouncedFetchItems = debounce(fetchItems, 500);
+
+  // Throttled version of fetchItems for infinite scrolling
+  const throttledFetchItems = throttle(fetchItems, 20000);
 
   // Handle search input
   const handleSearch = (e) => {
     const value = e.target.value;
     setQuery(value);
-    debouncedFetchItems(value);
+    throttledFetchItems(value,0,50);
   };
 
-  // Render function for the virtualized list
+  // Handle scrolling near the bottom
+  const handleScroll = ({ visibleStopIndex }) => {
+    if (visibleStopIndex >= items.length - 1) {
+      // Fetch next chunk of data
+      throttledFetchItems(query, items.length, 50); // Offset is the current length of items
+    }
+  };
+
+  // Render each row
   const renderRow = ({ index, style }) => {
     return (
       <div style={style}>
-        <div>{items[index]}</div>
+        {items[index] ? <p>{items[index]}</p> : <p>Loading...</p>}
       </div>
     );
   };
 
-  // Return the JSX for the component
   return (
     <div>
-      <h1>Virtualized Search with Debouncing</h1>
+      {count}
+      <h1>Throttled Scroll with React Window</h1>
       <input
         type="text"
         value={query}
@@ -66,9 +91,10 @@ export default function MovieSearch() {
       <div>
         <List
           height={400}
-          itemCount={items.length}
+          itemCount={hasMore ? items.length + 1 : items.length}
           itemSize={35}
           width={300}
+          onItemsRendered={({ visibleStopIndex }) => handleScroll({ visibleStopIndex })}
         >
           {renderRow}
         </List>
