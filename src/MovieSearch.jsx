@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
-
+const apiUrl = import.meta.env.VITE_API_URL;
 const throttle = (func, limit) => {
   let flag=true;
   return function(...args){
@@ -32,7 +32,7 @@ export default function MovieSearchWithScroll() {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:5000/search?query=${query}&offset=${offset}&limit=${limit}`
+        `${apiUrl}/search?query=${query}&offset=${offset}&limit=${limit}`
       );
       const data = await response.json();
       if (offset === 0) {
