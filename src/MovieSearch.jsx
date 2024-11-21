@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState,useMemo } from 'react';
 import { FixedSizeList as List } from 'react-window';
 const apiUrl = import.meta.env.VITE_API_URL;
+
 const throttle = (func, limit) => {
   let flag=true;
   return function(...args){
@@ -23,12 +24,12 @@ export default function MovieSearchWithScroll() {
   const [count,setCount]=useState(0);
   // API call for fetching search results
   const fetchItems = async (query, offset = 0, limit = 50) => {
-    if (!hasMore && offset > 0) return; // Prevent unnecessary calls
+    if (!hasMore && offset > 0) return;
     if (query.trim() === '') {
       setItems([]);
       return;
     }
-    setCount(count+1);
+    setCount((prev) => prev + 1);
     setLoading(true);
     try {
       const response = await fetch(
@@ -51,20 +52,21 @@ export default function MovieSearchWithScroll() {
 
 
   // Throttled version of fetchItems for infinite scrolling
-  const throttledFetchItems = throttle(fetchItems, 20000);
+  const throttledFetchItems = useMemo(
+    () => throttle(fetchItems, 5000),
+    [] 
+  );
 
-  // Handle search input
   const handleSearch = (e) => {
     const value = e.target.value;
     setQuery(value);
     throttledFetchItems(value,0,50);
   };
 
-  // Handle scrolling near the bottom
   const handleScroll = ({ visibleStopIndex }) => {
     if (visibleStopIndex >= items.length - 1) {
       // Fetch next chunk of data
-      throttledFetchItems(query, items.length, 50); // Offset is the current length of items
+      throttledFetchItems(query, items.length, 50);
     }
   };
 

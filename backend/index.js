@@ -3,7 +3,7 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin:"https://thriving-cocada-2f15ec.netlify.app"
+  origin:"*"
 }));
 
 const items = Array.from({ length: 1000 }, (_, index) => `Item ${index + 1}`);
